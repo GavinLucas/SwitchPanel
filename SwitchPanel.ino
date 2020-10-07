@@ -54,7 +54,7 @@ const bool down = true;
 // initialise some other values
 const int numVirtButtons = (numSwitches + numMagsDials + numFuelDials);
 const unsigned long gearTransitionTime = 5000; // the time it takes to extend and retract the gear
-const unsigned long virtButtonPress = 50;    // the duration of the button press
+const unsigned long virtButtonPress = 100;    // the duration of the button press
 
 // and declare some variables
 unsigned long loopMillis; // the time the loop starts
