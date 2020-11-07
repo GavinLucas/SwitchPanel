@@ -1,3 +1,12 @@
+/*
+ * Arduino code for modified Logitech Pro Flight Switch Panel using SparkFun Pro Micro
+ * 
+ * Written by Gavin Lucas
+ * https://github.com/GavinLucas/SwitchPanel
+ * 
+ * Copyright (c) 2019-2020, Gavin Lucas
+*/
+
 #include <Joystick.h> // https://github.com/MHeironimus/ArduinoJoystickLibrary
 
 // input used for mags dial
@@ -112,8 +121,8 @@ void loop() {
   if (magsPosition != prevMagsPosition && magsPosition < numMagsDials) {
     int mbtn = numSwitches + magsPosition;
     int oldmbtn = numSwitches + prevMagsPosition;
-    Joystick.setButton(mbtn, HIGH);
     Joystick.setButton(oldmbtn, LOW);
+    Joystick.setButton(mbtn, HIGH);
     initButtonPress[mbtn] = loopMillis;
     prevMagsPosition = magsPosition;
   }
@@ -128,8 +137,8 @@ void loop() {
   if (fuelPosition != prevFuelPosition && fuelPosition < numFuelDials) {
     int fbtn = numSwitches + numMagsDials + fuelPosition;
     int oldfbtn = numSwitches + numMagsDials + prevFuelPosition;
-    Joystick.setButton(fbtn, HIGH);
     Joystick.setButton(oldfbtn, LOW);
+    Joystick.setButton(fbtn, HIGH);
     initButtonPress[fbtn] = loopMillis;
     prevFuelPosition = fuelPosition;
   }
