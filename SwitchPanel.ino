@@ -63,7 +63,8 @@ const bool down = true;
 // initialise some other values
 const int numVirtButtons = (numSwitches + numMagsDials + numFuelDials);
 const unsigned long gearTransitionTime = 5000; // the time it takes to extend and retract the gear
-const unsigned long virtButtonPress = 150;    // the duration of the button press
+const unsigned long virtButtonPress = 100;    // the duration of the button press
+const unsigned long debounceTime = 20;       // duration to ignore further input
 
 // declare some variables
 
@@ -152,7 +153,7 @@ void loop() {
   for (int sw=0; sw < numSwitches; sw++) {
     // read the switch state
     bool switchState = digitalRead(switchPin[sw]);
-    if (switchState != switchLastState[sw]) {
+    if (switchState != switchLastState[sw] && (initButtonPress[sw] + debounceTime) < loopMillis) {
       // output the state to the PC
       Joystick.setButton(sw, HIGH);
       switchLastState[sw] = switchState;
