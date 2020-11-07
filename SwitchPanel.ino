@@ -1,7 +1,7 @@
 #include <Joystick.h> // https://github.com/MHeironimus/ArduinoJoystickLibrary
 
 // input used for mags dial
-const int magsPin = A3;
+const int magsPin = A3;   // input A3
 // values for mags dial
 const int magsOff = 0;
 const int magsRight = 1;
@@ -11,7 +11,7 @@ const int magsStart = 4;
 const int numMagsDials = 5;
 
 // input used for fuel dial
-const int fuelPin = A2;
+const int fuelPin = A2;  // input A2
 // values for fuel dial
 const int fuelOff = 0;
 const int left = 1;
@@ -38,8 +38,8 @@ const int landing = 12; // input 18
 const int gear = 13;    // input 19
 
 // gear LED pins
-const int redPin = 5;
-const int greenPin = 6;
+const int redPin = 5;   // input 5
+const int greenPin = 6; // input 6
 
 // gear LED values
 const int off = 0;
@@ -54,19 +54,14 @@ const bool down = true;
 // initialise some other values
 const int numVirtButtons = (numSwitches + numMagsDials + numFuelDials);
 const unsigned long gearTransitionTime = 5000; // the time it takes to extend and retract the gear
-const unsigned long virtButtonPress = 100;    // the duration of the button press
+const unsigned long virtButtonPress = 150;    // the duration of the button press
 
-// and declare some variables
-unsigned long loopMillis; // the time the loop starts
-unsigned long initButtonPress[numVirtButtons] = { 0 };  // the time the output pin was last toggled
-unsigned long gearChangeTime = 0;
-bool gearState;
-bool batState;
-int magsPosition; // the position of the mags dial
+// declare some variables
+
 int prevMagsPosition;
-int fuelPosition; // the position of the fuel dial
 int prevFuelPosition;
 bool switchLastState[numSwitches]; // the previous state will be stored here
+unsigned long initButtonPress[numVirtButtons] = { 0 };  // the time the output pin was last toggled
 
 // define the stick's configuration
 Joystick_ Joystick(JOYSTICK_DEFAULT_REPORT_ID, JOYSTICK_TYPE_JOYSTICK,
@@ -76,6 +71,7 @@ Joystick_ Joystick(JOYSTICK_DEFAULT_REPORT_ID, JOYSTICK_TYPE_JOYSTICK,
   false, false,          // No rudder or throttle
   false, false, false);  // No accelerator, brake, or steering
 
+// initial setup
 void setup() {
   // setup mags input
   pinMode(magsPin, INPUT);
@@ -106,79 +102,72 @@ void setup() {
   Joystick.begin();
 }
 
+// main loop
 void loop() {
   // time loop started to avoid constantly calling millis() in the loop
-  loopMillis = millis();
-  
+  unsigned long loopMillis = millis(); 
+
   // read the mags state
-  magsPosition = readAnalogPosition(magsPin);
-  if (magsPosition != prevMagsPosition && magsPosition < magsStart) {
-    Joystick.setButton((numSwitches + magsStart), LOW);
-    Joystick.setButton((numSwitches + magsPosition), HIGH);
-    delay(virtButtonPress);
-    Joystick.setButton((numSwitches + magsPosition), LOW);
+  int magsPosition = readAnalogPosition(magsPin);
+  if (magsPosition != prevMagsPosition && magsPosition < numMagsDials) {
+    int mbtn = numSwitches + magsPosition;
+    int oldmbtn = numSwitches + prevMagsPosition;
+    Joystick.setButton(mbtn, HIGH);
+    Joystick.setButton(oldmbtn, LOW);
+    initButtonPress[mbtn] = loopMillis;
     prevMagsPosition = magsPosition;
   }
-  else if (magsPosition != prevMagsPosition && magsPosition == magsStart) {
-    Joystick.setButton((numSwitches + magsStart), HIGH);
-    prevMagsPosition = magsPosition;
+  // release the mags button if it's time (apart from the start button)
+  int magbtn = numSwitches + prevMagsPosition;
+  if (prevMagsPosition != magsStart && ((initButtonPress[magbtn] + virtButtonPress) < loopMillis)) {
+    Joystick.setButton(magbtn, LOW);
   }
 
   // read the fuel state
-  fuelPosition = readAnalogPosition(fuelPin);
-  if (fuelPosition != prevFuelPosition) {
-    Joystick.setButton((numSwitches + numMagsDials + fuelPosition), HIGH);
-    delay(virtButtonPress);
-    Joystick.setButton((numSwitches + numMagsDials + fuelPosition), LOW);
+  int fuelPosition = readAnalogPosition(fuelPin);
+  if (fuelPosition != prevFuelPosition && fuelPosition < numFuelDials) {
+    int fbtn = numSwitches + numMagsDials + fuelPosition;
+    int oldfbtn = numSwitches + numMagsDials + prevFuelPosition;
+    Joystick.setButton(fbtn, HIGH);
+    Joystick.setButton(oldfbtn, LOW);
+    initButtonPress[fbtn] = loopMillis;
     prevFuelPosition = fuelPosition;
+  }
+  // release the fuel button if it's time
+  int fuelbtn = numSwitches + numMagsDials + prevFuelPosition;
+  if ((initButtonPress[fuelbtn] + virtButtonPress) < loopMillis) {
+    Joystick.setButton(fuelbtn, LOW);
   }
   
   // read switch states
-  for (int i=1; i < (numSwitches - 1); i++) {
+  for (int sw=0; sw < numSwitches; sw++) {
     // read the switch state
-    bool switchState = digitalRead(switchPin[i]);
-    if (switchState != switchLastState[i]) {
+    bool switchState = digitalRead(switchPin[sw]);
+    if (switchState != switchLastState[sw]) {
       // output the state to the PC
-      Joystick.setButton(i, HIGH);
-      delay(virtButtonPress);
-      Joystick.setButton(i, LOW);
-      switchLastState[i] = switchState;
+      Joystick.setButton(sw, HIGH);
+      switchLastState[sw] = switchState;
+      initButtonPress[sw] = loopMillis;
+    }
+    // release the button if it's time
+    else if ((initButtonPress[sw] + virtButtonPress) < loopMillis) {
+      Joystick.setButton(sw, LOW);
     }
   }
 
-  //read bat switch state
-  batState = digitalRead(switchPin[bat]);
-  if (batState != switchLastState[bat]) {
-    // output the state to the PC
-    Joystick.setButton(bat, HIGH);
-    delay(virtButtonPress);
-    Joystick.setButton(bat, LOW);
-    switchLastState[bat] = batState;
-  }
-
-  // read gear switch state
-  gearState = digitalRead(switchPin[gear]);
-  if (gearState != switchLastState[gear]) {
-      // output the state to the PC
-      Joystick.setButton(gear, HIGH);
-      delay(virtButtonPress);
-      Joystick.setButton(gear, LOW);
-      switchLastState[gear] = gearState;
-      gearChangeTime = loopMillis;
-  }
-  
-  // set LED colours
-  if (batState == true || (gearState == up && (loopMillis - gearChangeTime) > gearTransitionTime)) {
+  // set LED colours if the battery switch is on, else lights are off
+  if (switchLastState[bat] == HIGH || (switchLastState[gear] == up && (loopMillis - initButtonPress[gear]) > gearTransitionTime)) {
     setLEDcolour(off);
   }
-  else if (gearChangeTime != 0 && (loopMillis - gearChangeTime) < gearTransitionTime) {
+  else if (initButtonPress[gear] != 0 && (loopMillis - initButtonPress[gear]) < gearTransitionTime) {
     setLEDcolour(red);
   }
-  else if (gearState == down && (loopMillis - gearChangeTime) > gearTransitionTime) {
+  else if (switchLastState[gear] == down && (loopMillis - initButtonPress[gear]) > gearTransitionTime) {
     setLEDcolour(green);
   }
 }
 
+// function to read a resistor ladder
 int readAnalogPosition(int inputPin) {
   int analogPosition = analogRead(inputPin);
   if (analogPosition < 256) return 0;
@@ -189,6 +178,7 @@ int readAnalogPosition(int inputPin) {
   if (analogPosition > 921) return 5;
 }
 
+// function to set the LED colour
 void setLEDcolour(int LEDcolour) {
   switch (LEDcolour) {
     case off:
